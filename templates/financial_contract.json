@@ -1,0 +1,49 @@
+{
+  "template_id": "TMPL-FIN-001",
+  "document_type": "financial_contract",
+  "display_name": "Financial Contract",
+  "fields": [
+    {
+      "field_name": "client_name",
+      "display_name": "Client Legal Name",
+      "mandatory": true,
+      "patterns": ["(?:Client|Company|Customer|Organization)\\s*(?:Name|Legal Name)?\\s*[:\\-]\\s*([A-Z][A-Za-z\\s&.,]+(?:Inc|LLC|Ltd|Corp|Limited|Company)?)","(?:between|BETWEEN)\\s+[A-Z][A-Za-z\\s]+(?:Inc|LLC|Ltd|Corp)?\\s+(?:and|AND)\\s+([A-Z][A-Za-z\\s]+(?:Inc|LLC|Ltd|Corp)?)"],
+      "type": "text"
+    },
+    {
+      "field_name": "annual_contract_value",
+      "display_name": "Annual Contract Value",
+      "mandatory": true,
+      "patterns": ["(?:Annual Contract Value|ACV|Total Annual Value|Annual Value)\\s*[:\\-]?\\s*(?:USD|\\$|INR|Rs\\.?)?\\s*([\\d,]+(?:\\.\\d{1,2})?)","(?:Total Value|Contract Value|Annual Fee)\\s*[:\\-]?\\s*(?:USD|\\$|INR)?\\s*([\\d,]+(?:\\.\\d{1,2})?)"],
+      "type": "currency"
+    },
+    {
+      "field_name": "contract_start_date",
+      "display_name": "Contract Start Date",
+      "mandatory": true,
+      "patterns": ["(?:Start Date|Effective Date|Commencement Date)\\s*[:\\-]?\\s*(\\d{1,2}[\\/-]\\d{1,2}[\\/-]\\d{2,4})","(?:Start Date|Effective Date|Commencement Date)\\s*[:\\-]?\\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},?\\s+\\d{4})","(?:Start Date|Effective Date)\\s*[:\\-]?\\s*(\\d{4}-\\d{2}-\\d{2})"],
+      "type": "date"
+    },
+    {
+      "field_name": "contract_end_date",
+      "display_name": "Contract End Date",
+      "mandatory": false,
+      "patterns": ["(?:End Date|Expiry Date|Termination Date)\\s*[:\\-]?\\s*(\\d{1,2}[\\/-]\\d{1,2}[\\/-]\\d{2,4})","(?:End Date|Expiry Date)\\s*[:\\-]?\\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2},?\\s+\\d{4})"],
+      "type": "date"
+    },
+    {
+      "field_name": "package_name",
+      "display_name": "Package / Plan Name",
+      "mandatory": false,
+      "patterns": ["(?:Package|Plan|Service Package|Product Package)\\s*[:\\-]?\\s*([A-Za-z][A-Za-z\\s]+(?:Plan|Package|Plus|Pro|Premium|Basic|Standard|Enterprise)?)","(?:Package Name|Selected Package)\\s*[:\\-]?\\s*([A-Za-z][A-Za-z\\s]+)"],
+      "type": "text"
+    },
+    {
+      "field_name": "number_of_checks",
+      "display_name": "Number of Checks",
+      "mandatory": false,
+      "patterns": ["(?:Number of (?:Checks|Screenings)|Total (?:Checks|Screenings)|Background Checks)\\s*[:\\-]?\\s*([\\d,]+)","([\\d,]+)\\s+(?:background checks|screenings|verifications|checks per year)"],
+      "type": "number"
+    }
+  ]
+}

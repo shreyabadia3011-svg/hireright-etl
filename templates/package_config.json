@@ -1,0 +1,35 @@
+{
+  "template_id": "TMPL-PKG-001",
+  "document_type": "package_config",
+  "display_name": "Package Configuration",
+  "fields": [
+    {
+      "field_name": "package_name",
+      "display_name": "Package Name",
+      "mandatory": true,
+      "patterns": ["(?:Package Name|Package|Plan Name|Plan)\\s*[:\\-]\\s*([A-Za-z][A-Za-z\\s]+)"],
+      "type": "text"
+    },
+    {
+      "field_name": "included_checks",
+      "display_name": "Included Check Types",
+      "mandatory": true,
+      "patterns": ["(?:Includes?|Contains?|Check Types?|Components?)\\s*[:\\-]\\s*(.*?)(?:\\n\\n|$)"],
+      "type": "text"
+    },
+    {
+      "field_name": "turnaround_time",
+      "display_name": "Turnaround Time",
+      "mandatory": false,
+      "patterns": ["(?:Turnaround Time|TAT|Delivery Time|Processing Time)\\s*[:\\-]?\\s*(\\d+\\s*(?:business\\s*)?days?|\\d+\\s*hours?)"],
+      "type": "text"
+    },
+    {
+      "field_name": "price_per_check",
+      "display_name": "Price Per Check",
+      "mandatory": false,
+      "patterns": ["(?:Price per Check|Cost per Check|Per Check Price|Per Screening)\\s*[:\\-]?\\s*(?:\\$|USD|INR)?\\s*([\\d,]+(?:\\.\\d{1,2})?)"],
+      "type": "currency"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "template_id": "TMPL-PRC-001",
+  "document_type": "pricing_sheet",
+  "display_name": "Pricing Sheet",
+  "fields": [
+    {
+      "field_name": "product_name",
+      "display_name": "Product Name",
+      "mandatory": true,
+      "patterns": ["(?:Product|Service|Item)\\s*[:\\-]\\s*([A-Za-z][A-Za-z\\s]+)","^([A-Z][A-Za-z\\s]+)\\s*(?:Price|Cost|Fee)"],
+      "type": "text"
+    },
+    {
+      "field_name": "unit_price",
+      "display_name": "Unit Price",
+      "mandatory": true,
+      "patterns": ["(?:Unit Price|Price per Unit|Per Unit|Price)\\s*[:\\-]?\\s*(?:USD|\\$|INR|Rs\\.?)?\\s*([\\d,]+(?:\\.\\d{1,2})?)","(?:Rate|Cost)\\s*[:\\-]?\\s*(?:\\$|USD)?\\s*([\\d,]+(?:\\.\\d{1,2})?)"],
+      "type": "currency"
+    },
+    {
+      "field_name": "discount_percentage",
+      "display_name": "Discount %",
+      "mandatory": false,
+      "patterns": ["(?:Discount|Discount Rate|Rebate)\\s*[:\\-]?\\s*([\\d.]+)\\s*%","([\\d.]+)\\s*%\\s*(?:discount|off|rebate)"],
+      "type": "percentage"
+    },
+    {
+      "field_name": "validity_period",
+      "display_name": "Validity Period",
+      "mandatory": false,
+      "patterns": ["(?:Valid|Validity|Quote Valid|Valid Until|Expires)\\s*[:\\-]?\\s*(.*?)(?:\\n|$)"],
+      "type": "text"
+    }
+  ]
+}

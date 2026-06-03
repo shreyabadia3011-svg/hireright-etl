@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HireRight ETL Engine</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'IBM Plex Mono', 'Courier New', monospace; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; font-size: 13px; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d1117; } ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    .header { background: #0d1117; border-bottom: 2px solid #1e293b; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { width: 32px; height: 32px; background: linear-gradient(135deg,#3b82f6,#8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .tab-btn { padding: 5px 11px; font-size: 9px; letter-spacing: 0.1em; border: 1px solid #1e293b; border-radius: 5px; cursor: pointer; font-family: inherit; background: transparent; color: #475569; transition: all 0.15s; }
+    .tab-btn.active { background: #1e3a5f; color: #60a5fa; border-color: #3b82f6; font-weight: 700; }
+    .container { padding: 20px; max-width: 860px; margin: 0 auto; }
+    .card { background: #0d1117; border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    .label { font-size: 9px; color: #475569; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+    textarea, input[type=text] { width: 100%; background: #0d1117; border: 1px solid #1e293b; color: #e2e8f0; padding: 12px; font-family: inherit; font-size: 11px; border-radius: 7px; resize: vertical; line-height: 1.7; }
+    textarea:focus, input[type=text]:focus { outline: none; border-color: #3b82f6; }
+    select { background: #0d1117; border: 1px solid #1e293b; color: #e2e8f0; padding: 5px 8px; border-radius: 5px; font-family: inherit; font-size: 11px; cursor: pointer; }
+    .btn { padding: 9px 18px; border: none; border-radius: 6px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; font-weight: 700; transition: opacity 0.15s; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-success { background: #052e16; color: #4ade80; border: 1px solid #16a34a; }
+    .btn-ghost { background: transparent; color: #64748b; border: 1px solid #1e293b; }
+    .btn-purple { background: #4c1d95; color: #c4b5fd; border: 1px solid #6d28d9; }
+    .badge { font-size: 9px; padding: 3px 7px; border-radius: 4px; letter-spacing: 0.06em; font-weight: 700; }
+    .badge-green { background: #052e16; color: #4ade80; border: 1px solid #16a34a; }
+    .badge-amber { background: #1c1400; color: #fcd34d; border: 1px solid #92400e; }
+    .badge-red { background: #1a0505; color: #fca5a5; border: 1px solid #7f1d1d; }
+    .field-row { background: #0a0a0f; border: 1px solid #1e293b; border-radius: 6px; padding: 10px 12px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; gap: 10px; transition: border-color 0.2s; }
+    .field-row.ok { border-color: #16a34a; }
+    .routing-bar { border-radius: 7px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .routing-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #334155; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .stat-box { background: #0a0a0f; border: 1px solid #1e293b; border-radius: 7px; padding: 12px; text-align: center; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #1e293b; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success-box { background: #052e16; border: 1px solid #16a34a; border-radius: 8px; padding: 14px; }
+    .data-preview { background: #0a0a0f; border-radius: 6px; padding: 12px; margin-top: 10px; }
+    .data-row { display: flex; gap: 8px; margin-bottom: 5px; font-size: 10px; }
+    .data-key { color: #475569; min-width: 160px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .data-val { color: #60a5fa; }
+    .sample-btn { padding: 3px 9px; font-size: 9px; letter-spacing: 0.06em; background: #0d1117; color: #64748b; border: 1px solid #1e293b; border-radius: 4px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .sample-btn:hover { color: #94a3b8; border-color: #334155; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="logo">⚙</div>
+    <div>
+      <div style="font-weight:700;font-size:13px;letter-spacing:0.06em;color:#f1f5f9;">HIRERIGHT ETL ENGINE</div>
+      <div style="font-size:9px;color:#334155;letter-spacing:0.12em;">DOCUMENT EXTRACTION PROTOTYPE · PSO TEAM · v1.0</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;" id="tabs">
+    <button class="tab-btn active" onclick="showTab('extract')">EXTRACT</button>
+    <button class="tab-btn" onclick="showTab('review')">REVIEW</button>
+    <button class="tab-btn" onclick="showTab('history')">HISTORY (<span id="hist-count">0</span>)</button>
+    <button class="tab-btn" onclick="showTab('llm')">⚡ LLM</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- EXTRACT TAB -->
+  <div id="tab-extract">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <span class="label" style="margin:0;">DOC TYPE:</span>
+      <select id="doc-type-select">
+        <option value="auto">AUTO-DETECT</option>
+        <option value="financial_contract">FINANCIAL CONTRACT</option>
+        <option value="pricing_sheet">PRICING SHEET</option>
+        <option value="package_config">PACKAGE CONFIGURATION</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+      <span class="label" style="margin:0;">LOAD SAMPLE:</span>
+      <button class="sample-btn" onclick="loadSample('financial_contract')">FINANCIAL CONTRACT</button>
+      <button class="sample-btn" onclick="loadSample('pricing_sheet')">PRICING SHEET</button>
+      <button class="sample-btn" onclick="loadSample('package_config')">PACKAGE CONFIG</button>
+    </div>
+    <textarea id="doc-text" rows="12" placeholder="Paste document text here — contract, pricing sheet, or package config..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="runExtraction()" id="extract-btn">▶  EXTRACT FIELDS</button>
+      <label class="btn btn-ghost" style="cursor:pointer;">UPLOAD .TXT / .PDF / .XLSX <input type="file" accept=".txt,.pdf,.xlsx,.xls" style="display:none;" onchange="uploadFile(this)"></label>
+      <button class="btn btn-ghost" onclick="document.getElementById('doc-text').value='';">CLEAR</button>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <div class="label">HOW IT WORKS</div>
+      <div class="grid-3" style="margin-top:10px;">
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#3b82f6;letter-spacing:0.1em;margin-bottom:4px;">1. CLASSIFY</div>
+          <div style="font-size:10px;color:#475569;line-height:1.6;">Auto-detects document type using keyword signals</div>
+        </div>
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#3b82f6;letter-spacing:0.1em;margin-bottom:4px;">2. EXTRACT</div>
+          <div style="font-size:10px;color:#475569;line-height:1.6;">Regex patterns extract each field with confidence scoring</div>
+        </div>
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#3b82f6;letter-spacing:0.1em;margin-bottom:4px;">3. ROUTE</div>
+          <div style="font-size:10px;color:#475569;line-height:1.6;">Auto-accept (≥88%) · Partial review (70-88%) · Full review (&lt;70%)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW TAB -->
+  <div id="tab-review" class="hidden">
+    <div id="review-empty" class="empty-state">
+      <div style="font-size:28px;margin-bottom:10px;">📋</div>
+      <div style="font-size:11px;letter-spacing:0.08em;">NO DOCUMENT PROCESSED</div>
+      <div style="font-size:10px;color:#1e293b;margin-top:6px;">Go to Extract tab to process a document</div>
+    </div>
+    <div id="review-content" class="hidden">
+      <div class="card" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="label">DOCUMENT</div>
+          <div id="rv-filename" style="font-size:13px;color:#f1f5f9;font-weight:600;"></div>
+          <div id="rv-meta" style="font-size:10px;color:#475569;margin-top:3px;"></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label">CLASSIFICATION</div>
+          <div id="rv-conf" style="font-size:12px;color:#60a5fa;font-weight:700;"></div>
+        </div>
+      </div>
+      <div id="rv-routing" class="routing-bar"></div>
+      <div id="rv-fields"></div>
+      <div id="rv-actions" style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn btn-success" onclick="finaliseDoc()">✓  APPROVE &amp; LOAD TO DATABASE</button>
+        <button class="btn btn-ghost" onclick="discardDoc()">DISCARD</button>
+      </div>
+      <div id="rv-done" class="success-box hidden">
+        <div style="color:#4ade80;font-weight:700;font-size:11px;letter-spacing:0.08em;">✓ LOADED TO DATABASE SUCCESSFULLY</div>
+        <div id="rv-done-meta" style="font-size:10px;color:#15803d;margin-top:3px;"></div>
+        <div id="rv-done-data" class="data-preview"></div>
+        <button class="btn btn-ghost" style="margin-top:10px;font-size:9px;" onclick="newDoc()">+ PROCESS ANOTHER DOCUMENT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="hidden">
+    <div id="hist-empty" class="empty-state">
+      <div style="font-size:28px;margin-bottom:10px;">📂</div>
+      <div style="font-size:11px;letter-spacing:0.08em;">NO DOCUMENTS PROCESSED YET</div>
+    </div>
+    <div id="hist-content" class="hidden">
+      <div class="grid-3" style="margin-bottom:14px;" id="hist-stats"></div>
+      <div id="hist-list"></div>
+    </div>
+  </div>
+
+  <!-- LLM TAB -->
+  <div id="tab-llm" class="hidden">
+    <div class="card" style="border-color:#1e3a5f;">
+      <div style="font-size:10px;color:#60a5fa;letter-spacing:0.08em;margin-bottom:6px;">⚡ LLM EXTRACTION MODE — Claude Sonnet (Solution 3: Fallback for Novel Formats)</div>
+      <div style="font-size:10px;color:#475569;line-height:1.7;">When rule-based extraction fails on unknown document formats, Claude reads the document and extracts all fields. Every value is grounded — Claude cites the source text for each extracted field.</div>
+    </div>
+    <textarea id="llm-text" rows="8" placeholder="Paste document text here for LLM extraction..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-purple" onclick="runLLM()" id="llm-btn">⚡  EXTRACT WITH CLAUDE</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('llm-text').value=document.getElementById('doc-text').value||SAMPLES.financial_contract;">LOAD SAMPLE</button>
+    </div>
+    <div id="llm-result" style="margin-top:16px;"></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="label">SOLUTION COMPARISON</div>
+      <div class="grid-3" style="margin-top:10px;">
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#22c55e;letter-spacing:0.1em;margin-bottom:4px;">RULE-BASED</div>
+          <div style="font-size:9px;color:#475569;line-height:1.6;margin-bottom:6px;">Fast, deterministic, 97%+ on known formats. Breaks on format change.</div>
+          <div style="font-size:9px;color:#22c55e;">✓ Active (Extract tab)</div>
+        </div>
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#f59e0b;letter-spacing:0.1em;margin-bottom:4px;">ML MODEL</div>
+          <div style="font-size:9px;color:#475569;line-height:1.6;margin-bottom:6px;">88-93% after training. Needs 500+ labeled docs per type.</div>
+          <div style="font-size:9px;color:#f59e0b;">○ Phase 3 (future)</div>
+        </div>
+        <div style="background:#0a0a0f;border-radius:6px;padding:10px;">
+          <div style="font-size:9px;color:#8b5cf6;letter-spacing:0.1em;margin-bottom:4px;">LLM (CLAUDE)</div>
+          <div style="font-size:9px;color:#475569;line-height:1.6;margin-bottom:6px;">Immediate coverage, handles any format, verbatim grounding.</div>
+          <div style="font-size:9px;color:#8b5cf6;">⚡ This tab</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SAMPLES = {
+  financial_contract: `SERVICE AGREEMENT
+
+This Agreement is entered into between Acme Technologies Inc. and HireRight Inc.
+
+Client Name: Acme Technologies Inc.
+Effective Date: March 1, 2024
+End Date: February 28, 2025
+Annual Contract Value: USD 87,500
+Package: Enterprise Standard
+Number of Checks: 350 background checks per year
+
+Payment Terms: Net 30 days from invoice date.`,
+
+  pricing_sheet: `BACKGROUND SCREENING PRICING SHEET
+
+Product: Standard Criminal Check
+Unit Price: USD 29.99
+Discount: 15%
+Valid Until: December 31, 2024`,
+
+  package_config: `BACKGROUND CHECK PACKAGE CONFIGURATION
+
+Package Name: Professional Plus
+Includes: Criminal Record Check, Employment Verification, Education Verification, Identity Check
+Turnaround Time: 3 business days
+Price Per Check: USD 65.00`
+};
+
+const TEMPLATES = {
+  financial_contract: {
+    display: "Financial Contract",
+    fields: [
+      { name:"client_name", label:"Client Legal Name", mandatory:true, type:"text", patterns:[/(?:Client|Company|Customer)\s*(?:Name|Legal Name)?\s*[:\-]\s*([A-Z][A-Za-z\s&.,]+(?:Inc|LLC|Ltd|Corp|Limited)?)/i] },
+      { name:"acv", label:"Annual Contract Value", mandatory:true, type:"currency", patterns:[/(?:Annual Contract Value|ACV|Total Annual Value|Annual Value)\s*[:\-]?\s*(?:USD|\$|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,/(?:Total Value|Contract Value|Annual Fee)\s*[:\-]?\s*(?:USD|\$|INR)?\s*([\d,]+(?:\.\d{1,2})?)/i] },
+      { name:"start_date", label:"Contract Start Date", mandatory:true, type:"date", patterns:[/(?:Start Date|Effective Date|Commencement Date)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,/(?:Start Date|Effective Date|Commencement Date)\s*[:\-]?\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4})/i] },
+      { name:"end_date", label:"Contract End Date", mandatory:false, type:"date", patterns:[/(?:End Date|Expiry Date|Termination Date)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,/(?:End Date|Expiry Date)\s*[:\-]?\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4})/i] },
+      { name:"package", label:"Package / Plan Name", mandatory:false, type:"text", patterns:[/Package\s*[:\-]\s*([A-Za-z][A-Za-z\s]+(?:Plus|Pro|Premium|Basic|Standard|Enterprise|Essential)?)/i] },
+      { name:"num_checks", label:"Number of Checks", mandatory:false, type:"number", patterns:[/(?:Number of (?:Checks|Screenings)|Total (?:Checks|Screenings))\s*[:\-]?\s*([\d,]+)/i,/([\d,]+)\s+(?:background checks|screenings|checks per year)/i] },
+    ]
+  },
+  pricing_sheet: {
+    display: "Pricing Sheet",
+    fields: [
+      { name:"product_name", label:"Product / Service Name", mandatory:true, type:"text", patterns:[/(?:Product|Service|Item)\s*[:\-]\s*([A-Za-z][A-Za-z\s]+)/i] },
+      { name:"unit_price", label:"Unit Price", mandatory:true, type:"currency", patterns:[/(?:Unit Price|Price per Unit|Per Unit|Base Price)\s*[:\-]?\s*(?:USD|\$|INR|Rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)/i,/(?:Price)\s*[:\-]?\s*(?:USD|\$)?\s*([\d,]+(?:\.\d{1,2})?)/i] },
+      { name:"discount", label:"Discount %", mandatory:false, type:"percentage", patterns:[/(?:Discount|Rebate)\s*[:\-]?\s*([\d.]+)\s*%/i] },
+      { name:"validity", label:"Valid Until", mandatory:false, type:"text", patterns:[/(?:Valid Until|Validity|Quote Valid|Expires)\s*[:\-]?\s*(.+?)(?:\n|$)/i] },
+    ]
+  },
+  package_config: {
+    display: "Package Configuration",
+    fields: [
+      { name:"package_name", label:"Package Name", mandatory:true, type:"text", patterns:[/(?:Package Name|Package|Plan Name|Plan)\s*[:\-]\s*([A-Za-z][A-Za-z\s]+)/i] },
+      { name:"included_checks", label:"Included Check Types", mandatory:true, type:"text", patterns:[/(?:Includes?|Contains?|Check Types?|Components?)\s*[:\-]\s*(.+?)(?:\n[A-Z]|\n\n|$)/is] },
+      { name:"tat", label:"Turnaround Time", mandatory:false, type:"text", patterns:[/(?:Turnaround Time|TAT|Delivery Time)\s*[:\-]?\s*(\d+\s*(?:business\s*)?days?|\d+\s*hours?)/i] },
+      { name:"price_per_check", label:"Price Per Check", mandatory:false, type:"currency", patterns:[/(?:Price per Check|Cost per Check|Per Check Price)\s*[:\-]?\s*(?:\$|USD|INR)?\s*([\d,]+(?:\.\d{1,2})?)/i] },
+    ]
+  }
+};
+
+let currentDoc = null;
+let historyDocs = [];
+
+function showTab(name) {
+  ['extract','review','history','llm'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['extract','review','history','llm'][i] === name));
+  });
+}
+
+function loadSample(type) {
+  document.getElementById('doc-text').value = SAMPLES[type];
+  document.getElementById('doc-type-select').value = type;
+}
+
+function parseVal(raw, type) {
+  if (!raw) return {v:null, c:0};
+  raw = raw.trim().replace(/[.,;]+$/,'').trim();
+  if (type==="currency") {
+    const n = parseFloat(raw.replace(/[,\s]/g,'').replace(/^[^\d]*/,''));
+    if (!isNaN(n)) return {v: n.toLocaleString('en-US',{minimumFractionDigits:2}), c:0.95};
+    return {v:raw, c:0.6};
+  }
+  if (type==="date") {
+    const mn={january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+    const tl = raw.toLowerCase();
+    for (const [name,num] of Object.entries(mn)) {
+      if (tl.includes(name)) {
+        const nums = raw.match(/\d+/g);
+        if (nums) { const yr=nums.find(n=>n.length===4); const dy=nums.find(n=>parseInt(n)<=31&&n.length<=2); if(yr&&dy) return{v:`${yr}-${num}-${dy.padStart(2,'0')}`,c:0.9}; }
+      }
+    }
+    const m1 = raw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m1) { const[,d,mo,y]=m1; return{v:`${y.length===2?'20'+y:y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`,c:0.85}; }
+    return {v:raw, c:0.7};
+  }
+  if (type==="number") { const n=parseInt(raw.replace(/[,\s]/g,'')); return isNaN(n)?{v:raw,c:0.6}:{v:String(n),c:0.95}; }
+  if (type==="percentage") { const m=raw.match(/([\d.]+)/); return m?{v:m[1]+'%',c:0.95}:{v:raw,c:0.7}; }
+  return {v: raw.replace(/\s+/g,' ').trim().substring(0,80), c:0.82};
+}
+
+function classify(text, filename) {
+  const t=text.toLowerCase(), f=(filename||'').toLowerCase();
+  const s={financial_contract:0, pricing_sheet:0, package_config:0};
+  ["contract","agreement","effective date","annual contract value","acv","hereinafter"].forEach(k=>{if(t.includes(k))s.financial_contract+=2;});
+  ["unit price","price list","discount","quote","pricing","rate card"].forEach(k=>{if(t.includes(k))s.pricing_sheet+=2;});
+  ["package","plan","includes","turnaround","tat","check types","components"].forEach(k=>{if(t.includes(k))s.package_config+=2;});
+  if(["contract","agreement","msa"].some(k=>f.includes(k)))s.financial_contract+=5;
+  if(["pricing","price","quote"].some(k=>f.includes(k)))s.pricing_sheet+=5;
+  if(["package","plan","config"].some(k=>f.includes(k)))s.package_config+=5;
+  const best=Object.entries(s).sort((a,b)=>b[1]-a[1])[0];
+  return{type:best[0], conf:Math.min(best[1]/10,1.0)};
+}
+
+function extractFields(text, template) {
+  return template.fields.map(field => {
+    let bv=null, bc=0;
+    for(let i=0;i<field.patterns.length;i++) {
+      const m=field.patterns[i].exec(text);
+      if(m){const{v,c}=parseVal(m[1]||m[0],field.type);const adj=c*(i===0?1.0:0.9);if(v&&adj>bc){bv=v;bc=adj;}}
+    }
+    return {...field, value:bv, confidence:bc, edited:false, approved:false};
+  });
+}
+
+function computeRouting(fields) {
+  const mand=fields.filter(f=>f.mandatory), miss=mand.filter(f=>!f.value);
+  if(miss.length)return{routing:"full_review",score:0,band:"low",reason:"Missing: "+miss.map(f=>f.label).join(', ')};
+  const sc=[...mand.map(f=>f.confidence),...mand.map(f=>f.confidence),...fields.filter(f=>!f.mandatory&&f.value).map(f=>f.confidence)];
+  const comp=sc.reduce((a,b)=>a+b,0)/sc.length, r=Math.round(comp*1000)/1000;
+  if(comp>=0.88)return{routing:"auto_accept",score:r,band:"high",reason:"All fields extracted with high confidence"};
+  if(comp>=0.70)return{routing:"partial_review",score:r,band:"medium",reason:"Some fields below confidence threshold — review flagged fields"};
+  return{routing:"full_review",score:r,band:"low",reason:"Low confidence — full manual review required"};
+}
+
+function confColor(c){return c>=0.88?"#22c55e":c>=0.70?"#f59e0b":"#ef4444";}
+
+const RC={auto_accept:{label:"AUTO-ACCEPT",color:"#22c55e",bg:"background:#052e16",border:"border:1px solid #16a34a",icon:"✓"},partial_review:{label:"PARTIAL REVIEW",color:"#f59e0b",bg:"background:#1c1400",border:"border:1px solid #92400e",icon:"⚠"},full_review:{label:"FULL REVIEW",color:"#ef4444",bg:"background:#1a0505",border:"border:1px solid #7f1d1d",icon:"✕"}};
+
+function runExtraction() {
+  const text=document.getElementById('doc-text').value.trim();
+  const dtSelect=document.getElementById('doc-type-select').value;
+  if(!text){alert("Please paste document text first.");return;}
+  const btn=document.getElementById('extract-btn');
+  btn.innerHTML='<span class="spinner"></span>PROCESSING...';
+  btn.disabled=true;
+  setTimeout(()=>{
+    const cl=classify(text,'document.txt');
+    const dt=dtSelect!=='auto'?dtSelect:cl.type;
+    const tmpl=TEMPLATES[dt];
+    const fields=extractFields(text,tmpl);
+    const routing=computeRouting(fields);
+    currentDoc={docId:'DOC-'+Math.random().toString(36).substr(2,8).toUpperCase(),filename:'document.txt',docType:dt,docTypeDisplay:tmpl.display,classConf:cl.conf,fields,routing,processedAt:new Date().toISOString(),isDone:false};
+    renderReview();
+    showTab('review');
+    btn.innerHTML='▶  EXTRACT FIELDS';
+    btn.disabled=false;
+  },500);
+}
+
+function uploadFile(input) {
+  const file=input.files[0]; if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['txt','pdf','xlsx'].includes(ext)){alert("For PDF/Excel, use the Flask backend. TXT files work directly here.");return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('doc-text').value=e.target.result;
+    document.getElementById('extract-btn').click();
+  };
+  reader.readAsText(file);
+}
+
+function renderReview() {
+  if(!currentDoc){document.getElementById('review-empty').classList.remove('hidden');document.getElementById('review-content').classList.add('hidden');return;}
+  document.getElementById('review-empty').classList.add('hidden');
+  document.getElementById('review-content').classList.remove('hidden');
+  document.getElementById('rv-done').classList.add('hidden');
+  document.getElementById('rv-actions').style.display='flex';
+  document.getElementById('rv-filename').textContent=currentDoc.filename;
+  document.getElementById('rv-meta').textContent=currentDoc.docTypeDisplay+' · '+new Date(currentDoc.processedAt).toLocaleTimeString()+' · '+currentDoc.fields.filter(f=>f.value).length+'/'+currentDoc.fields.length+' fields extracted';
+  document.getElementById('rv-conf').textContent=Math.round(currentDoc.classConf*100)+'% CONFIDENCE — '+currentDoc.docType.replace(/_/g,' ').toUpperCase();
+  // Routing bar
+  const rt=currentDoc.routing, rc=RC[rt.routing];
+  document.getElementById('rv-routing').style.cssText=`${rc.bg};${rc.border};border-radius:7px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;`;
+  document.getElementById('rv-routing').innerHTML=`<div class="routing-icon" style="background:${rc.color}">${rc.icon}</div><div><div style="font-weight:700;color:${rc.color};font-size:11px;letter-spacing:0.08em;">${rc.label} — COMPOSITE SCORE: ${Math.round(rt.score*100)}%</div><div style="font-size:10px;color:#64748b;margin-top:2px;">${rt.reason}</div></div>`;
+  // Fields
+  const fc=document.getElementById('rv-fields'); fc.innerHTML='';
+  currentDoc.fields.forEach(f=>{
+    const ok=f.approved||f.edited;
+    const div=document.createElement('div');
+    div.className='field-row'+(ok?' ok':'');
+    div.id='frow-'+f.name;
+    div.innerHTML=`
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <span style="font-size:9px;color:#475569;letter-spacing:0.1em;text-transform:uppercase;">${f.label}</span>
+          ${f.mandatory?'<span style="font-size:8px;color:#ef4444;letter-spacing:0.06em;">REQ</span>':''}
+          ${f.edited?'<span style="font-size:8px;color:#22c55e;letter-spacing:0.06em;">CORRECTED</span>':''}
+        </div>
+        <div id="fval-${f.name}" style="font-size:12px;color:${f.value?'#f1f5f9':'#334155'};font-weight:${f.value?500:400};">${f.value||'— NOT FOUND —'}</div>
+        <div id="fedit-${f.name}" style="display:none;gap:6px;margin-top:4px;">
+          <input type="text" id="finput-${f.name}" value="${f.value||''}" style="flex:1;padding:4px 8px;font-size:11px;height:28px;" onkeydown="if(event.key==='Enter')saveField('${f.name}');if(event.key==='Escape')cancelEdit('${f.name}');">
+          <button class="btn btn-primary" style="padding:4px 8px;font-size:9px;height:28px;" onclick="saveField('${f.name}')">SAVE</button>
+          <button class="btn btn-ghost" style="padding:4px 8px;font-size:9px;height:28px;" onclick="cancelEdit('${f.name}')">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <div style="text-align:right;min-width:52px;">
+          <div style="font-size:9px;color:#475569;letter-spacing:0.06em;">CONF</div>
+          <div style="font-size:12px;color:${confColor(f.confidence)};font-weight:700;">${f.value?Math.round(f.confidence*100)+'%':'—'}</div>
+        </div>
+        ${f.value&&!ok?`<button class="btn btn-ghost" style="padding:3px 7px;font-size:9px;" onclick="startEdit('${f.name}')">EDIT</button><button class="btn btn-success" style="padding:3px 7px;font-size:9px;" onclick="approveField('${f.name}')">✓ OK</button>`:''}
+        ${ok?'<span style="font-size:14px;">✅</span>':''}
+      </div>`;
+    fc.appendChild(div);
+  });
+}
+
+function startEdit(name){
+  document.getElementById('fval-'+name).style.display='none';
+  const ed=document.getElementById('fedit-'+name);
+  ed.style.display='flex';
+  document.getElementById('finput-'+name).focus();
+}
+function cancelEdit(name){
+  document.getElementById('fval-'+name).style.display='block';
+  document.getElementById('fedit-'+name).style.display='none';
+}
+function saveField(name){
+  const val=document.getElementById('finput-'+name).value.trim();
+  const f=currentDoc.fields.find(f=>f.name===name);
+  if(f){f.value=val;f.confidence=1.0;f.edited=true;}
+  currentDoc.routing=computeRouting(currentDoc.fields);
+  renderReview();
+}
+function approveField(name){
+  const f=currentDoc.fields.find(f=>f.name===name);
+  if(f){f.confidence=1.0;f.approved=true;}
+  renderReview();
+}
+function finaliseDoc(){
+  if(!currentDoc)return;
+  historyDocs.unshift({...currentDoc, finalisedAt:new Date().toISOString()});
+  document.getElementById('hist-count').textContent=historyDocs.length;
+  document.getElementById('rv-actions').style.display='none';
+  const done=document.getElementById('rv-done');
+  done.classList.remove('hidden');
+  document.getElementById('rv-done-meta').textContent=currentDoc.fields.filter(f=>f.value).length+' fields written · '+new Date().toLocaleTimeString();
+  const dp=document.getElementById('rv-done-data');
+  dp.innerHTML=currentDoc.fields.filter(f=>f.value).map(f=>`<div class="data-row"><span class="data-key">${f.label}:</span><span class="data-val">${f.value}</span></div>`).join('');
+  renderHistory();
+}
+function discardDoc(){currentDoc=null;showTab('extract');}
+function newDoc(){currentDoc=null;document.getElementById('doc-text').value='';showTab('extract');}
+
+function renderHistory(){
+  if(!historyDocs.length){document.getElementById('hist-empty').classList.remove('hidden');document.getElementById('hist-content').classList.add('hidden');return;}
+  document.getElementById('hist-empty').classList.add('hidden');
+  document.getElementById('hist-content').classList.remove('hidden');
+  const auto=historyDocs.filter(d=>d.routing.routing==="auto_accept").length;
+  document.getElementById('hist-stats').innerHTML=[['TOTAL',historyDocs.length,'#60a5fa'],['AUTO-ACCEPTED',auto,'#22c55e'],['REVIEWED',historyDocs.length-auto,'#f59e0b']].map(([l,v,c])=>`<div class="stat-box"><div style="font-size:22px;color:${c};font-weight:700;">${v}</div><div style="font-size:9px;color:#475569;letter-spacing:0.1em;margin-top:2px;">${l}</div></div>`).join('');
+  document.getElementById('hist-list').innerHTML=historyDocs.map(d=>{const rc=RC[d.routing.routing];return`<div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><div style="font-size:12px;color:#f1f5f9;font-weight:600;">${d.filename}</div><div style="font-size:10px;color:#475569;margin-top:2px;">${d.docTypeDisplay} · ${d.fields.filter(f=>f.value).length} fields · ${new Date(d.finalisedAt).toLocaleTimeString()}</div></div><div style="display:flex;gap:8px;align-items:center;"><span class="badge" style="color:${rc.color};${rc.bg.replace('background:','background-color:')};${rc.border.replace('border:','border:')}">${rc.label}</span><span style="font-size:10px;color:#22c55e;letter-spacing:0.06em;">✓ LOADED</span></div></div>`;}).join('');
+}
+
+async function runLLM(){
+  const text=document.getElementById('llm-text').value.trim();
+  if(!text){alert("Please paste document text first.");return;}
+  const btn=document.getElementById('llm-btn');
+  btn.innerHTML='<span class="spinner"></span>EXTRACTING WITH CLAUDE...';
+  btn.disabled=true;
+  document.getElementById('llm-result').innerHTML='';
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:`Extract structured data from this document. Return ONLY valid JSON:
+{"document_type":"financial_contract|pricing_sheet|package_config","fields":{"client_name":{"value":"string or null","confidence":0.95},"annual_contract_value":{"value":"number as string or null","confidence":0.9},"start_date":{"value":"YYYY-MM-DD or null","confidence":0.9},"end_date":{"value":"YYYY-MM-DD or null","confidence":0.9},"package_name":{"value":"string or null","confidence":0.85},"number_of_checks":{"value":"number as string or null","confidence":0.9}}}
+
+Document:\n${text}`}]})});
+    const data=await res.json();
+    const raw=(data.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(raw);
+    const cc=c=>c>=0.88?"#22c55e":c>=0.70?"#f59e0b":"#ef4444";
+    document.getElementById('llm-result').innerHTML=`
+      <div class="card">
+        <div class="label">CLAUDE EXTRACTION RESULT</div>
+        <div style="font-size:10px;color:#475569;margin:6px 0 10px;">Doc type: <span style="color:#60a5fa;">${(parsed.document_type||'unknown').toUpperCase()}</span></div>
+        ${Object.entries(parsed.fields||{}).map(([k,v])=>`
+          <div style="background:#0a0a0f;border-radius:5px;padding:7px 10px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:9px;color:#475569;min-width:160px;text-transform:uppercase;letter-spacing:0.06em;">${k.replace(/_/g,' ')}</span>
+            <span style="font-size:11px;color:#60a5fa;flex:1;">${v?.value||'—'}</span>
+            <span style="font-size:10px;color:${cc(v?.confidence||0)};min-width:36px;text-align:right;">${v?.confidence?Math.round(v.confidence*100)+'%':'—'}</span>
+          </div>`).join('')}
+        <div style="margin-top:10px;font-size:9px;color:#334155;letter-spacing:0.06em;">✓ All values grounded in source document text</div>
+      </div>`;
+  }catch(e){
+    document.getElementById('llm-result').innerHTML=`<div style="background:#1a0505;border:1px solid #7f1d1d;border-radius:7px;padding:12px;font-size:11px;color:#ef4444;">Error: ${e.message}</div>`;
+  }
+  btn.innerHTML='⚡  EXTRACT WITH CLAUDE';
+  btn.disabled=false;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HireRight ETL Agent</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Mono','Courier New',monospace;background:#0a0a0f;color:#e2e8f0;font-size:12px;min-height:100vh;}
+input,textarea,select{background:#0d1117;border:1px solid #1e293b;color:#e2e8f0;padding:7px 10px;font-family:inherit;font-size:11px;border-radius:5px;}
+input:focus,textarea:focus{outline:none;border-color:#3b82f6;}
+button{cursor:pointer;font-family:inherit;transition:opacity 0.15s;}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:10px;letter-spacing:0.08em;font-weight:700;}
+.btn-blue{background:#3b82f6;color:#fff;}
+.btn-green{background:#052e16;color:#4ade80;border:1px solid #16a34a;}
+.btn-ghost{background:transparent;color:#64748b;border:1px solid #1e293b;}
+.btn-purple{background:#1a0a30;color:#c4b5fd;border:1px solid #4c1d95;}
+.card{background:#0d1117;border:1px solid #1e293b;border-radius:8px;padding:14px;margin-bottom:12px;}
+.label{font-size:9px;color:#475569;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.badge{font-size:9px;padding:3px 7px;border-radius:4px;letter-spacing:0.06em;font-weight:700;}
+.badge-green{background:#052e16;color:#4ade80;border:1px solid #16a34a;}
+.badge-amber{background:#1c1400;color:#fcd34d;border:1px solid #92400e;}
+.badge-red{background:#1a0505;color:#fca5a5;border:1px solid #7f1d1d;}
+.badge-blue{background:#0f2140;color:#60a5fa;border:1px solid #1e3a5f;}
+.badge-purple{background:#1a0a30;color:#c4b5fd;border:1px solid #4c1d95;}
+.tab-btn{padding:5px 12px;font-size:9px;letter-spacing:0.08em;border:1px solid #1e293b;border-radius:5px;background:transparent;color:#475569;}
+.tab-btn.active{background:#1e3a5f;color:#60a5fa;border-color:#3b82f6;font-weight:700;}
+.field-row{background:#0a0a0f;border:1px solid #1e293b;border-radius:5px;padding:9px 11px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.drop-zone{border:2px dashed #1e293b;border-radius:10px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.drop-zone.drag-over{border-color:#3b82f6;background:#060f1e;}
+.drop-zone:hover{border-color:#334155;}
+.progress-bar{height:4px;background:#1e293b;border-radius:2px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:2px;transition:width 0.3s;}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid #1e293b;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.file-item{background:#0d1117;border:1px solid #1e293b;border-radius:6px;padding:9px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px;animation:fadeIn 0.2s;}
+.score-bar{height:6px;border-radius:3px;background:#1e293b;overflow:hidden;width:80px;}
+.score-fill{height:100%;border-radius:3px;transition:width 0.5s;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div style="background:#0d1117;border-bottom:2px solid #1e293b;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:30px;height:30px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;">🤖</div>
+    <div>
+      <div style="font-weight:700;font-size:12px;letter-spacing:0.06em;color:#f1f5f9;">HIRERIGHT ETL AGENT</div>
+      <div style="font-size:9px;color:#334155;letter-spacing:0.1em;">CLAUDE DECIDES EXTRACTION PATH · PDF · EXCEL · BULK IMPORT</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;" id="tab-bar">
+    <button class="tab-btn active" onclick="showTab('upload')">UPLOAD</button>
+    <button class="tab-btn" onclick="showTab('bulk')">BULK IMPORT</button>
+    <button class="tab-btn" onclick="showTab('results')">RESULTS (<span id="result-count">0</span>)</button>
+  </div>
+</div>
+
+<div style="padding:16px;max-width:900px;margin:0 auto;">
+
+<!-- API KEY ROW -->
+<div class="card" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+  <div style="flex:3;min-width:220px;">
+    <div class="label">ANTHROPIC API KEY</div>
+    <div style="display:flex;gap:6px;">
+      <input type="password" id="api-key" placeholder="sk-ant-api03-..." style="flex:1;" />
+      <button class="btn btn-ghost" style="padding:7px 10px;font-size:9px;" onclick="toggleKey()">SHOW</button>
+    </div>
+  </div>
+  <div style="flex:1;min-width:120px;">
+    <div class="label">SERVER STATUS</div>
+    <div id="server-status" style="font-size:10px;color:#475569;padding:7px 0;">Checking...</div>
+  </div>
+  <div style="flex:1;min-width:120px;">
+    <div class="label">LIMITS</div>
+    <div id="limits-info" style="font-size:9px;color:#334155;line-height:1.6;">...</div>
+  </div>
+</div>
+
+<!-- HOW ROUTING WORKS -->
+<div class="card" style="background:#060b10;border-color:#0f2140;">
+  <div class="label" style="color:#3b82f6;">HOW CLAUDE DECIDES — NO MANUAL CHECK NEEDED</div>
+  <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;margin-top:10px;align-items:center;">
+    <div style="background:#0d1117;border-radius:6px;padding:9px;text-align:center;">
+      <div style="font-size:14px;margin-bottom:3px;">📄</div>
+      <div style="font-size:9px;color:#60a5fa;letter-spacing:0.08em;margin-bottom:2px;">YOU UPLOAD</div>
+      <div style="font-size:9px;color:#334155;">PDF, Excel, CSV, TXT<br/>up to 50MB</div>
+    </div>
+    <div style="color:#1e293b;font-size:16px;text-align:center;">→</div>
+    <div style="background:#0d1117;border-radius:6px;padding:9px;text-align:center;">
+      <div style="font-size:14px;margin-bottom:3px;">🔍</div>
+      <div style="font-size:9px;color:#60a5fa;letter-spacing:0.08em;margin-bottom:2px;">CLAUDE INSPECTS</div>
+      <div style="font-size:9px;color:#334155;">Scores structure 0–100<br/>Counts labels, tables, narrative</div>
+    </div>
+    <div style="color:#1e293b;font-size:16px;text-align:center;">→</div>
+    <div style="background:#0d1117;border-radius:6px;padding:9px;text-align:center;">
+      <div style="font-size:14px;margin-bottom:3px;">⚡ or 🧠</div>
+      <div style="font-size:9px;color:#60a5fa;letter-spacing:0.08em;margin-bottom:2px;">DECIDES PATH</div>
+      <div style="font-size:9px;color:#334155;"><span style="color:#22c55e;">Regex</span> if score ≥ 50<br/><span style="color:#8b5cf6;">LLM</span> if score &lt; 50</div>
+    </div>
+  </div>
+  <div style="margin-top:10px;padding:8px 10px;background:#0d1117;border-radius:5px;font-size:9px;color:#475569;line-height:1.7;">
+    <span style="color:#22c55e;">⚡ REGEX PATH</span> — structured docs with clear "Field: Value" labels. Fast, deterministic, free. &nbsp;|&nbsp;
+    <span style="color:#8b5cf6;">🧠 LLM PATH</span> — narrative emails, complex contracts, mixed formats. Requires API key. Returns verbatim source quotes.
+  </div>
+</div>
+
+<!-- UPLOAD TAB -->
+<div id="tab-upload">
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" 
+       ondragover="event.preventDefault();this.classList.add('drag-over')"
+       ondragleave="this.classList.remove('drag-over')"
+       ondrop="handleDrop(event)">
+    <div style="font-size:32px;margin-bottom:10px;">📂</div>
+    <div style="font-size:13px;color:#94a3b8;letter-spacing:0.04em;margin-bottom:6px;">DROP FILE HERE or CLICK TO BROWSE</div>
+    <div style="font-size:10px;color:#334155;">PDF · Excel (.xlsx / .xls) · CSV · TXT &nbsp;·&nbsp; Max 50MB per file</div>
+    <input type="file" id="file-input" accept=".pdf,.xlsx,.xls,.csv,.txt" style="display:none;" onchange="handleSingleFile(this.files[0])"/>
+  </div>
+
+  <div id="upload-progress" style="display:none;" class="card">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="spinner"></span>
+      <span id="upload-msg" style="font-size:11px;color:#60a5fa;"></span>
+    </div>
+    <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="single-result" style="display:none;"></div>
+</div>
+
+<!-- BULK TAB -->
+<div id="tab-bulk" style="display:none;">
+  <div class="card" style="background:#060b10;border-color:#0f2140;">
+    <div class="label" style="color:#3b82f6;">BULK IMPORT — UP TO 20 FILES AT ONCE</div>
+    <div style="font-size:10px;color:#475569;margin-top:4px;line-height:1.7;">
+      Drop multiple files or click to select. Claude analyses each file independently and decides regex vs LLM per file.
+      Results show a summary table with routing decision for each document.
+    </div>
+  </div>
+
+  <div class="drop-zone" id="bulk-drop" onclick="document.getElementById('bulk-input').click()"
+       ondragover="event.preventDefault();this.classList.add('drag-over')"
+       ondragleave="this.classList.remove('drag-over')"
+       ondrop="handleBulkDrop(event)">
+    <div style="font-size:32px;margin-bottom:10px;">📦</div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;">DROP MULTIPLE FILES or CLICK TO SELECT</div>
+    <div style="font-size:10px;color:#334155;">Max 20 files · 50MB each · PDF, Excel, CSV, TXT</div>
+    <input type="file" id="bulk-input" multiple accept=".pdf,.xlsx,.xls,.csv,.txt" style="display:none;" onchange="handleBulkFiles(this.files)"/>
+  </div>
+
+  <div id="bulk-queue" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="label" style="margin:0;">FILES QUEUED</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-blue" onclick="runBulk()" id="bulk-run-btn">🤖 PROCESS ALL</button>
+        <button class="btn btn-ghost" onclick="clearBulk()">CLEAR</button>
+      </div>
+    </div>
+    <div id="bulk-file-list"></div>
+  </div>
+
+  <div id="bulk-progress" style="display:none;" class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span class="spinner"></span>
+      <span id="bulk-msg" style="font-size:11px;color:#60a5fa;"></span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="bulk-progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="bulk-results" style="display:none;"></div>
+</div>
+
+<!-- RESULTS TAB -->
+<div id="tab-results" style="display:none;">
+  <div id="results-empty" style="text-align:center;padding:50px;color:#1e293b;">
+    <div style="font-size:28px;margin-bottom:8px;">📋</div>
+    <div style="font-size:11px;letter-spacing:0.06em;">NO RESULTS YET — UPLOAD A FILE</div>
+  </div>
+  <div id="results-list"></div>
+</div>
+
+</div>
+
+<script>
+const API_BASE = 'http://localhost:5052';
+let allResults = [];
+let bulkFiles = [];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function apiKey(){ return document.getElementById('api-key').value.trim(); }
+function toggleKey(){ const i=document.getElementById('api-key'); i.type=i.type==='password'?'text':'password'; }
+function showTab(name){
+  ['upload','bulk','results'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===name?'block':'none';
+    document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['upload','bulk','results'][i]===name));
+  });
+}
+function setProgress(id,pct){ document.getElementById(id).style.width=pct+'%'; }
+function confColor(c){ return c>=0.88?'#22c55e':c>=0.70?'#f59e0b':'#ef4444'; }
+function routingBadge(r){
+  const m={auto_accept:'badge-green',partial_review:'badge-amber',full_review:'badge-red'};
+  const l={auto_accept:'AUTO-ACCEPT',partial_review:'PARTIAL REVIEW',full_review:'FULL REVIEW'};
+  return `<span class="badge ${m[r]||'badge-blue'}">${l[r]||r.toUpperCase()}</span>`;
+}
+function methodBadge(m){
+  if(m==='llm') return '<span class="badge badge-purple">🧠 LLM</span>';
+  if(m==='regex_fallback') return '<span class="badge badge-amber">⚡ REGEX (LLM fallback)</span>';
+  return '<span class="badge" style="background:#051a08;color:#4ade80;border:1px solid #16a34a;">⚡ REGEX</span>';
+}
+
+// ── Server status check ───────────────────────────────────────────────────────
+async function checkServer(){
+  try{
+    const r=await fetch(API_BASE+'/api/limits',{signal:AbortSignal.timeout(2000)});
+    const d=await r.json();
+    document.getElementById('server-status').innerHTML='<span style="color:#22c55e;">● SERVER RUNNING</span>';
+    document.getElementById('limits-info').innerHTML=
+      `Max file: ${d.max_file_size_mb}MB<br>Max bulk: ${d.max_bulk_files} files<br>PDF: ${d.pdf_support?'✓':'✗'} &nbsp;Excel: ${d.excel_support?'✓':'✗'}`;
+  }catch(e){
+    document.getElementById('server-status').innerHTML='<span style="color:#ef4444;">● SERVER OFFLINE</span><br><span style="font-size:9px;color:#334155;">Run: python server.py</span>';
+  }
+}
+checkServer(); setInterval(checkServer,10000);
+
+// ── Single file upload ────────────────────────────────────────────────────────
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const f=e.dataTransfer.files[0]; if(f) handleSingleFile(f);
+}
+
+async function handleSingleFile(file){
+  if(!file) return;
+  const resultDiv = document.getElementById('single-result');
+  const progressDiv = document.getElementById('upload-progress');
+  resultDiv.style.display='none';
+  progressDiv.style.display='block';
+  document.getElementById('upload-msg').textContent=`Reading ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)...`;
+  setProgress('progress-fill',20);
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try{
+    setProgress('progress-fill',50);
+    document.getElementById('upload-msg').textContent='Claude is analysing structure...';
+    const r = await fetch(API_BASE+'/api/upload', {
+      method:'POST', body:fd,
+      headers: apiKey()?{'X-API-Key':apiKey()}:{}
+    });
+    setProgress('progress-fill',90);
+    const d = await r.json();
+    progressDiv.style.display='none';
+    setProgress('progress-fill',0);
+
+    if(d.error){ resultDiv.innerHTML=`<div class="card" style="border-color:#7f1d1d;background:#1a0505;color:#ef4444;">Error: ${d.error}</div>`; resultDiv.style.display='block'; return; }
+
+    allResults.unshift(d);
+    document.getElementById('result-count').textContent=allResults.length;
+    resultDiv.innerHTML = renderSingleResult(d);
+    resultDiv.style.display='block';
+    renderResultsList();
+  }catch(e){
+    progressDiv.style.display='none';
+    resultDiv.innerHTML=`<div class="card" style="border-color:#7f1d1d;background:#1a0505;"><div style="color:#ef4444;font-weight:700;margin-bottom:4px;">Connection Error</div><div style="font-size:10px;color:#94a3b8;">Make sure the server is running: <code style="color:#60a5fa;">python server.py</code></div></div>`;
+    resultDiv.style.display='block';
+  }
+}
+
+function renderSingleResult(d){
+  const rc={auto_accept:{c:'#22c55e',bg:'#052e16',br:'#16a34a',i:'✓'},partial_review:{c:'#f59e0b',bg:'#1c1400',br:'#92400e',i:'⚠'},full_review:{c:'#ef4444',bg:'#1a0505',br:'#7f1d1d',i:'✕'}};
+  const r=rc[d.routing?.routing]||rc.full_review;
+  const a=d.structure_analysis||{};
+  const score=a.structure_score||0;
+  const scorePct=score;
+  const scoreCol=score>=50?'#22c55e':score>=30?'#f59e0b':'#ef4444';
+
+  return `
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+    <div>
+      <div class="label">DOCUMENT</div>
+      <div style="font-size:13px;color:#f1f5f9;font-weight:600;">${d.filename}</div>
+      <div style="font-size:10px;color:#475569;margin-top:2px;">${d.file_type} · ${d.size_mb}MB · ${d.doc_type_display}</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${methodBadge(d.method_used)}
+      ${routingBadge(d.routing?.routing)}
+    </div>
+  </div>
+
+  <!-- Structure Analysis -->
+  <div style="background:#060b10;border:1px solid #0f2140;border-radius:6px;padding:10px;margin-bottom:12px;">
+    <div class="label" style="color:#3b82f6;margin-bottom:8px;">HOW CLAUDE DECIDED</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+      ${[['STRUCTURE',score+'/100',scoreCol],['LABELS',a.labelled_fields||0,'#60a5fa'],['NARRATIVE',a.narrative_lines||0,a.narrative_lines>5?'#f59e0b':'#475569'],['LEGAL PHRASES',a.legal_phrases||0,a.legal_phrases>2?'#ef4444':'#475569']].map(([l,v,c])=>`
+      <div style="background:#0d1117;border-radius:5px;padding:7px;text-align:center;">
+        <div style="font-size:16px;color:${c};font-weight:700;">${v}</div>
+        <div style="font-size:8px;color:#334155;letter-spacing:0.08em;margin-top:2px;">${l}</div>
+      </div>`).join('')}
+    </div>
+    <div class="score-bar" style="width:100%;margin-bottom:6px;"><div class="score-fill" style="width:${scorePct}%;background:${scoreCol};"></div></div>
+    <div style="font-size:10px;color:${d.method_used==='regex'||d.method_used==='regex_fallback'?'#4ade80':'#c4b5fd'};font-weight:700;">
+      ${d.method_used==='regex'?'⚡ Claude chose REGEX':'🧠 Claude chose LLM'} — ${a.reason||''}
+    </div>
+  </div>
+
+  <!-- Routing -->
+  <div style="background:${r.bg};border:1px solid ${r.br};border-radius:6px;padding:9px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+    <div style="width:24px;height:24px;border-radius:50%;background:${r.c};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">${r.i}</div>
+    <div>
+      <div style="font-weight:700;color:${r.c};font-size:11px;letter-spacing:0.06em;">${(d.routing?.routing||'').replace(/_/g,' ').toUpperCase()} — ${Math.round((d.routing?.score||0)*100)}%</div>
+      <div style="font-size:10px;color:#64748b;margin-top:1px;">${d.routing?.reason||''}</div>
+    </div>
+  </div>
+
+  <!-- Fields -->
+  <div class="label" style="margin-bottom:6px;">EXTRACTED FIELDS</div>
+  ${(d.fields||[]).map(f=>`
+  <div class="field-row" style="border-color:${f.value?'#1e293b':'#2d0a0a'};">
+    <div style="flex:1;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:2px;">
+        <span style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">${f.label}</span>
+        ${f.mandatory?'<span style="font-size:8px;color:#ef4444;">REQ</span>':''}
+        ${f.method==='llm'?'<span style="font-size:8px;color:#8b5cf6;">LLM</span>':''}
+      </div>
+      <div style="font-size:12px;color:${f.value?'#f1f5f9':'#334155'};font-weight:${f.value?500:400};">${f.value||'— NOT FOUND —'}</div>
+      ${f.quote?`<div style="margin-top:3px;font-size:9px;color:#334155;font-style:italic;border-left:2px solid #1e293b;padding-left:6px;">"${f.quote}"</div>`:''}
+    </div>
+    <div style="text-align:right;flex-shrink:0;min-width:48px;">
+      <div style="font-size:9px;color:#475569;">CONF</div>
+      <div style="font-size:12px;color:${confColor(f.confidence)};font-weight:700;">${f.value?Math.round(f.confidence*100)+'%':'—'}</div>
+    </div>
+  </div>`).join('')}
+
+  ${d.routing?.routing!=='full_review'?`<button class="btn btn-green" style="margin-top:8px;" onclick="alert('In production: this writes to the HireRight database.')">✓ APPROVE &amp; LOAD TO DATABASE</button>`:''}
+</div>`;
+}
+
+// ── Bulk upload ───────────────────────────────────────────────────────────────
+function handleBulkDrop(e){
+  e.preventDefault();
+  document.getElementById('bulk-drop').classList.remove('drag-over');
+  handleBulkFiles(e.dataTransfer.files);
+}
+
+function handleBulkFiles(fileList){
+  if(!fileList||!fileList.length) return;
+  const allowed=['.pdf','.xlsx','.xls','.csv','.txt'];
+  Array.from(fileList).forEach(f=>{
+    const ext='.'+f.name.split('.').pop().toLowerCase();
+    if(allowed.includes(ext) && bulkFiles.length<20) bulkFiles.push(f);
+  });
+  renderBulkQueue();
+}
+
+function renderBulkQueue(){
+  if(!bulkFiles.length){document.getElementById('bulk-queue').style.display='none';return;}
+  document.getElementById('bulk-queue').style.display='block';
+  document.getElementById('bulk-file-list').innerHTML=bulkFiles.map((f,i)=>`
+    <div class="file-item">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;">
+        <span style="font-size:14px;">${f.name.endsWith('.pdf')?'📄':f.name.match(/\.xlsx?$/)?'📊':'📋'}</span>
+        <div>
+          <div style="font-size:11px;color:#f1f5f9;">${f.name}</div>
+          <div style="font-size:9px;color:#475569;">${(f.size/1024/1024).toFixed(2)}MB</div>
+        </div>
+      </div>
+      <button onclick="bulkFiles.splice(${i},1);renderBulkQueue();" style="background:transparent;border:none;color:#334155;font-size:14px;padding:0 4px;">✕</button>
+    </div>`).join('');
+}
+
+function clearBulk(){ bulkFiles=[]; document.getElementById('bulk-queue').style.display='none'; document.getElementById('bulk-results').style.display='none'; }
+
+async function runBulk(){
+  if(!bulkFiles.length) return;
+  const btn=document.getElementById('bulk-run-btn');
+  const progressDiv=document.getElementById('bulk-progress');
+  const resultsDiv=document.getElementById('bulk-results');
+  btn.disabled=true;
+  progressDiv.style.display='block';
+  resultsDiv.style.display='none';
+  document.getElementById('bulk-msg').textContent=`Processing ${bulkFiles.length} files...`;
+  setProgress('bulk-progress-fill',10);
+
+  const fd=new FormData();
+  bulkFiles.forEach(f=>fd.append('files',f));
+
+  try{
+    setProgress('bulk-progress-fill',40);
+    const r=await fetch(API_BASE+'/api/bulk',{method:'POST',body:fd,headers:apiKey()?{'X-API-Key':apiKey()}:{}});
+    setProgress('bulk-progress-fill',90);
+    const d=await r.json();
+    progressDiv.style.display='none';
+    setProgress('bulk-progress-fill',0);
+
+    if(d.error){resultsDiv.innerHTML=`<div class="card" style="border-color:#7f1d1d;color:#ef4444;">${d.error}</div>`;resultsDiv.style.display='block';btn.disabled=false;return;}
+
+    // Add to global results
+    d.results.filter(r=>r.status==='processed').forEach(r=>{allResults.unshift(r);});
+    document.getElementById('result-count').textContent=allResults.length;
+    renderResultsList();
+
+    resultsDiv.innerHTML=renderBulkSummary(d);
+    resultsDiv.style.display='block';
+  }catch(e){
+    progressDiv.style.display='none';
+    resultsDiv.innerHTML=`<div class="card" style="border-color:#7f1d1d;background:#1a0505;"><div style="color:#ef4444;font-weight:700;">Connection Error</div><div style="font-size:10px;color:#94a3b8;margin-top:4px;">Make sure server is running: <code style="color:#60a5fa;">python server.py</code></div></div>`;
+    resultsDiv.style.display='block';
+  }
+  btn.disabled=false;
+}
+
+function renderBulkSummary(d){
+  return `
+<div class="card">
+  <div class="label" style="margin-bottom:10px;">BATCH RESULTS — ${d.batch_id}</div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">
+    ${[['TOTAL',d.total_files,'#60a5fa'],['PROCESSED',d.processed,'#22c55e'],['AUTO-ACCEPTED',d.auto_accepted,'#4ade80'],['NEEDS REVIEW',d.needs_review,'#f59e0b'],['SKIPPED/ERR',d.skipped+d.errors,'#ef4444']].map(([l,v,c])=>`
+    <div style="background:#0a0a0f;border:1px solid #1e293b;border-radius:6px;padding:9px;text-align:center;">
+      <div style="font-size:20px;color:${c};font-weight:700;">${v}</div>
+      <div style="font-size:8px;color:#334155;letter-spacing:0.06em;margin-top:2px;">${l}</div>
+    </div>`).join('')}
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid #1e293b;">
+        ${['FILENAME','TYPE','METHOD','SCORE','FIELDS','ROUTING'].map(h=>`<th style="padding:7px 8px;text-align:left;font-size:9px;color:#475569;letter-spacing:0.08em;">${h}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${d.results.map(r=>`
+        <tr style="border-bottom:1px solid #0d1117;">
+          <td style="padding:7px 8px;font-size:11px;color:#f1f5f9;">${r.filename.substring(0,30)}${r.filename.length>30?'…':''}</td>
+          <td style="padding:7px 8px;font-size:10px;color:#60a5fa;">${r.doc_type||'—'}</td>
+          <td style="padding:7px 8px;">${r.status==='processed'?methodBadge(r.method_used):`<span style="font-size:9px;color:#ef4444;">${r.status.toUpperCase()}</span>`}</td>
+          <td style="padding:7px 8px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="score-bar"><div class="score-fill" style="width:${r.structure_score||0}%;background:${(r.structure_score||0)>=50?'#22c55e':(r.structure_score||0)>=30?'#f59e0b':'#ef4444'};"></div></div>
+              <span style="font-size:10px;color:#475569;">${r.structure_score||0}</span>
+            </div>
+          </td>
+          <td style="padding:7px 8px;font-size:10px;color:#60a5fa;">${r.fields_found||0}/${r.fields_total||0}</td>
+          <td style="padding:7px 8px;">${r.routing?routingBadge(r.routing):`<span style="font-size:9px;color:#ef4444;">${r.error||'ERROR'}</span>`}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+}
+
+function renderResultsList(){
+  const list=document.getElementById('results-list');
+  const empty=document.getElementById('results-empty');
+  if(!allResults.length){empty.style.display='block';list.innerHTML='';return;}
+  empty.style.display='none';
+  list.innerHTML=allResults.map(d=>`
+    <div class="file-item" style="cursor:pointer;" onclick="showTab('upload')">
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#f1f5f9;font-weight:600;">${d.filename}</div>
+        <div style="font-size:10px;color:#475569;margin-top:2px;">${(d.doc_type||'').replace(/_/g,' ')} · ${d.fields?.filter(f=>f.value).length||d.fields_found||0} fields extracted · ${new Date(d.processed_at||Date.now()).toLocaleTimeString()}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        ${methodBadge(d.method_used)}
+        ${routingBadge(d.routing?.routing||d.routing)}
+      </div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
