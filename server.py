@@ -356,6 +356,9 @@ def export():
     for d in docs: d['fields']=get_document_fields(d['doc_id'])
     return jsonify({"exported_at":datetime.datetime.now().isoformat(),"count":len(docs),"documents":docs})
 
+@app.route('/health')
+def health(): return 'ok', 200
+
 @app.route('/api/limits', methods=['GET'])
 def limits():
     return jsonify({"max_file_size_mb":MAX_MB,"max_bulk_files":20,
